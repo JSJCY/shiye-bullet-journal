@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f6f7f9">
+  <meta name="description" content="拾页 — 用符号记录生活，留一点时间给自己。">
+  <title>拾页 · 子弹笔记</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='12' fill='%2327ddc2'/%3E%3Ctext x='20' y='28' text-anchor='middle' font-size='30' fill='%23202b36'%3E•%3C/text%3E%3C/svg%3E">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <link rel="stylesheet" href="styles.css">
+  <script src="journal-core.js" defer></script>
+  <script src="sync-model.js" defer></script>
+  <script src="config.js" defer></script>
+  <script src="provider.js" defer></script>
+  <script src="sync-engine.js" defer></script>
+  <script src="sync-ui.js" defer></script>
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <a href="#" class="brand" aria-label="拾页，返回今日"><span class="brand-mark">•</span><span>拾页<span class="brand-dot">.</span><small>BULLET JOURNAL</small></span></a>
+      <div class="notebook-label"><span class="notebook-icon">▤</span> 我的第一本笔记 <span class="tiny-dot"></span></div>
+      <div class="section-label">我的记录 <span>MY JOURNAL</span></div>
+      <nav id="main-nav" aria-label="笔记导航">
+        <button class="nav-item active" data-view="daily"><span class="nav-icon">☀</span>每日记录<span class="nav-tail">TODAY</span></button>
+        <button class="nav-item" data-view="monthly"><span class="nav-icon">▦</span>月度计划</button>
+        <button class="nav-item" data-view="future"><span class="nav-icon">↗</span>未来计划</button>
+        <button class="nav-item" data-view="tracking"><span class="nav-icon">◷</span>时间跟进<span id="tracking-count" class="collection-count"></span></button>
+      </nav>
+      <div class="section-label collections-label">主题集合 <span>COLLECTIONS</span></div>
+      <nav aria-label="主题集合" id="collection-nav">
+        <button class="nav-item" data-view="collection" data-collection="产品想法"><span class="collection-dot green"></span>产品想法<span class="collection-count" data-count="产品想法"></span></button>
+        <button class="nav-item" data-view="collection" data-collection="待读书"><span class="collection-dot terracotta"></span>待读书<span class="collection-count" data-count="待读书"></span></button>
+      </nav>
+      <div class="sidebar-bottom">
+        <div class="sidebar-note">
+          <svg viewBox="0 0 100 92" aria-hidden="true"><path d="M32 80Q58 53 64 12M44 66Q18 57 30 44Q49 43 48 60M55 45Q31 32 42 23Q60 29 58 38M60 35Q83 40 86 26Q73 20 63 30M51 59Q78 66 80 51Q68 41 56 51" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+          <p>一笔一事，<br>慢慢向前。</p><small>MAKE ROOM FOR WHAT MATTERS.</small>
+        </div>
+        <button class="key-link" id="open-key"><span>⊙</span> 符号索引 <kbd>Key</kbd></button>
+        <div class="save-state"><span></span><span id="save-label" role="status">保存在此浏览器</span></div>
+      </div>
+    </aside>
+    <div class="workspace">
+      <header class="topbar">
+        <div class="breadcrumb"><span>我的笔记</span><span class="crumb-slash">/</span><span id="breadcrumb-current">每日记录</span></div>
+        <div class="top-actions">
+          <span class="prototype-tag">交互原型</span>
+          <button class="icon-button" id="search-toggle" aria-label="搜索全部记录" title="搜索全部记录"></button>
+          <button class="export-button" id="sync-toggle">账号与同步</button>
+          <button class="export-button" id="import-backup">导入备份</button><input id="backup-file" type="file" accept=".json,application/json" hidden>
+          <button class="export-button" id="backup">完整备份</button>
+          <button class="export-button" id="export">导出笔记 <span>↗</span></button>
+        </div>
+      </header>
+      <main class="main-layout">
+        <section class="journal-area">
+          <div class="page-heading">
+            <div><div class="eyebrow" id="page-eyebrow">A LITTLE SPACE FOR YOUR DAY</div><h1 id="page-title">把今天，写清楚。</h1><p id="page-subtitle">记下要做的事，也记下值得记住的瞬间。</p></div>
+            <span class="heading-flower" aria-hidden="true">✳</span>
+          </div>
+          <div class="search-wrap" id="search-wrap" hidden><label for="search-input">搜索全部记录</label><input id="search-input" placeholder="输入关键词，搜索所有页面…" type="search"><button id="search-close" class="icon-button" aria-label="关闭搜索">×</button></div>
+          <div id="storage-warning" class="storage-warning" hidden>当前数据暂时无法安全保存，原内容未被覆盖。<button id="download-recovery">导出原始备份</button></div>
+          <article class="paper">
+            <div class="paper-heading">
+              <div class="date-block"><span class="date-number" id="date-number">12</span><div><h2 id="journal-title">十月 · 星期一</h2><p id="journal-caption">2026 / OCTOBER <span>DAILY LOG</span></p></div></div>
+              <div class="day-navigation" id="day-navigation"><button class="icon-button" id="prev-day" aria-label="前一天">‹</button><button id="today-button" class="today-button">今天</button><button class="icon-button" id="next-day" aria-label="后一天">›</button></div>
+            </div>
+            <div class="week-strip" id="week-strip" aria-label="选择日期"></div>
+            <div id="tracking-tabs" class="tracking-tabs" hidden><button data-tracking="pending" class="selected">全部未完成</button><button data-tracking="overdue">已逾期</button><button data-tracking="today">今天</button><button data-tracking="completed">已完成</button><button data-tracking="events">事件</button></div>
+            <div class="journal-toolbar">
+              <div class="filters" id="filters"><button data-filter="all" class="selected">全部</button><button data-filter="task">任务</button><button data-filter="event">事件</button><button data-filter="note">笔记</button></div>
+              <span id="entry-summary">让记录轻一点</span>
+            </div>
+            <div class="entry-list" id="entry-list" aria-live="polite"></div>
+            <form class="composer" id="composer" novalidate>
+              <div class="composer-main"><button type="button" class="composer-symbol" id="composer-symbol" aria-label="选择记录类型">•</button><input id="entry-input" autocomplete="off" aria-label="新记录" placeholder="记下一件事…" maxlength="2000"><button type="submit" class="add-button" aria-label="添加记录">↵</button></div>
+              <div class="composer-foot"><div class="type-selector" id="type-selector"><button type="button" data-type="task" class="chosen"><span>•</span>任务</button><button type="button" data-type="event"><span>○</span>事件</button><button type="button" data-type="note"><span>–</span>笔记</button></div><span class="input-hint"><kbd>Enter</kbd> 记录 · <kbd>*</kbd> 重要 · <kbd>!</kbd> 灵感</span></div>
+              <details id="composer-timing" class="composer-timing"><summary>日期与时间 <span>可选</span></summary><div class="timing-grid"><div><label id="composer-date-label" for="composer-plan-date">计划日期</label><input id="composer-plan-date" type="date"></div><div><label for="composer-plan-time">时间（可选）</label><input id="composer-plan-time" type="time"></div></div><div class="timing-grid" id="composer-deadline"><div><label for="composer-due-date">截止日期</label><input id="composer-due-date" type="date"></div><div><label for="composer-due-time">截止时间（可选）</label><input id="composer-due-time" type="time"></div></div><p id="composer-placement-hint"></p></details>
+            </form>
+            <div class="paper-footer"><span>不必写满，留下重要的就好。</span><span id="page-number">01 / DAILY LOG</span></div>
+          </article>
+          <div class="below-paper"><span>• 任务&nbsp;&nbsp; ○ 事件&nbsp;&nbsp; – 笔记</span><button id="below-key">查看符号说明 ↗</button></div>
+        </section>
+        <aside class="right-panel">
+          <section class="calendar-section">
+            <div class="aside-heading"><h3 id="calendar-heading">2026年10月</h3><div><button class="icon-button" id="prev-month" aria-label="上个月">‹</button><button class="icon-button" id="next-month" aria-label="下个月">›</button></div></div>
+            <div class="calendar-weekdays"><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span><span>日</span></div>
+            <div class="calendar-grid" id="calendar-grid"></div>
+            <div class="calendar-legend"><span class="legend-dot"></span>有记录的日子</div>
+          </section>
+          <section class="review-section"><div class="aside-heading"><h3>待跟进的事</h3><span class="mini-label">FOLLOW UP</span></div><p class="aside-description">过往未完成与逾期事项，都留在这里。</p><div id="review-list"></div></section>
+          <section class="agenda-section"><div class="aside-heading"><h3>今日安排</h3><span class="mini-label">EVENTS</span></div><div id="event-agenda"></div></section>
+          <section class="symbols-section"><div class="aside-heading"><h3>符号，是记录的语言</h3></div><div class="symbol-samples"><span>•</span><span>×</span><span>○</span><span>–</span><span>&gt;</span><span>&lt;</span></div><p>点击行首符号，完成一件事，<br>或把它安排到合适的页面。</p><button id="aside-key">认识这些符号 <span>↗</span></button></section>
+          <div class="right-footer"><span>拾页 · SHIYE</span><span>把时间留给值得的事</span></div>
+        </aside>
+      </main>
+    </div>
+  </div>
+  <dialog id="sync-dialog" class="sync-dialog" aria-label="同步与小组件"></dialog>
+  <dialog id="action-dialog" class="action-dialog"><form method="dialog" class="dialog-close-form"><button class="icon-button" aria-label="关闭对话框">×</button></form><div id="dialog-content"></div></dialog>
+  <div id="toast" class="toast" role="status"></div>
+</body>
+</html>

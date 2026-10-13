@@ -1,0 +1,13 @@
+node_modules/
+dist/
+.runtime/
+backups/
+.archify/
+/cloudbase-adapter.js
+/cloudbaserc.json
+.env
+.env.*
+!.env.example
+*.log
+.DS_Store
+Thumbs.db
