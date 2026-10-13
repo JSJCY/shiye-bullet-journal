@@ -9,6 +9,24 @@ function groups(raw){
   for(const g of map.values())g.entries.sort((a,b)=>a.id.localeCompare(b.id));
   return map;
 }
+function visible(raw){return Core.normalize(raw).filter(e=>!e.trashedAt);}
+function setTrashed(raw,selections,trashed=true,now=new Date()){
+ const entries=Core.normalize(raw),map=groups(entries),selected=new Map(selections.map(s=>[s.key,s.revision]));
+ const at=new Date(now).toISOString();
+ for(const [key,revision]of selected){const g=map.get(key);if(!g||g.revision!==revision)throw new Error('记录已在其他窗口变化，请重新查看列表后操作。');}
+ const histories=new Map();
+ for(const [key]of selected){const g=map.get(key),entry=Core.taskFor(g.entries,g.entries[0]);if(Boolean(entry.trashedAt)===trashed)continue;histories.set(key,{revision:g.revision+1,history:[...entry.history,{id:uid(),kind:trashed?'trashed':'restored',at}]});}
+ const result=Core.normalize(entries.map(entry=>{const change=histories.get(keyOf(entry));return change?{...entry,...clone(change),trashedAt:trashed?at:null,updatedAt:at}:entry;}));
+ if(trashed&&histories.size){
+  try{
+   const next=groups(result),selections=[...histories.keys()].map(key=>({key,revision:next.get(key).revision}));
+   for(const operation of diff(entries,result,'trash-check'))validateOperation(operation);
+   const restored=setTrashed(result,selections,false,now).map(entry=>histories.has(keyOf(entry))?{...entry,receivedAt:entry.receivedAt||at,serverUpdatedAt:at}:entry);
+   for(const operation of diff(result,restored,'restore-check'))validateOperation(operation);
+  }catch{throw new Error('所选记录历史或体积过大，无法保证完整恢复。请先导出备份；本次未移动。');}
+ }
+ return result;
+}
 function diff(before,after,deviceId){
   const old=groups(before),fresh=groups(after),operations=[];
   for(const [key,g] of fresh){const previous=old.get(key);if(!previous||JSON.stringify(previous.entries)!==JSON.stringify(g.entries)){
@@ -23,10 +41,10 @@ function validateOperation(op){
   if(!Array.isArray(op.entries)||!op.entries.length||op.entries.length>200||JSON.stringify(op.entries).length>600000)throw new Error('单项记录过大，请导出备份后精简。');
   const clean=op.entries.map(e=>{
     if(!e||typeof e.id!=='string'||!/^[\w.:-]{1,128}$/.test(e.id)||typeof e.text!=='string'||!e.text.trim()||e.text.length>2000||String(e.memo||'').length>4000)throw new Error('记录内容或标识无效。');
-    const allowed=['id','text','type','status','priority','inspiration','location','date','collection','taskId','taskState','eventState','sourceId','target','createdAt','updatedAt','recordedAt','startedAt','completedAt','occurredAt','cancelledAt','plannedDate','plannedTime','dueDate','dueTime','history','revision','memo','receivedAt','serverUpdatedAt'];
+    const allowed=['id','text','type','status','priority','inspiration','location','date','collection','taskId','taskState','eventState','sourceId','target','createdAt','updatedAt','recordedAt','startedAt','completedAt','occurredAt','cancelledAt','plannedDate','plannedTime','dueDate','dueTime','history','revision','memo','trashedAt','receivedAt','serverUpdatedAt'];
     const x=Object.fromEntries(allowed.filter(k=>Object.hasOwn(e,k)).map(k=>[k,clone(e[k])]));
     if(!Number.isInteger(x.revision)||x.revision<0||!Array.isArray(x.history)||x.history.length>2000)throw new Error('记录版本或历史无效。');
-    for(const k of ['createdAt','updatedAt','recordedAt','startedAt','completedAt','occurredAt','cancelledAt'])if(x[k]!=null&&!Number.isFinite(Date.parse(x[k])))throw new Error('记录时间无效。');
+    for(const k of ['createdAt','updatedAt','recordedAt','startedAt','completedAt','occurredAt','cancelledAt','trashedAt'])if(x[k]!=null&&!Number.isFinite(Date.parse(x[k])))throw new Error('记录时间无效。');
     return x;
   });
   const map=groups(clean);
@@ -38,7 +56,7 @@ function validateOperation(op){
   return g;
 }
 function summary(raw,now=new Date(),updatedAt=null){
-  const entries=Core.normalize(raw,now),today=Core.getToday(now),tasks=Core.activeTasks(entries);
+  const entries=Core.normalize(raw,now).filter(e=>!e.trashedAt),today=Core.getToday(now),tasks=Core.activeTasks(entries);
   const selected=tasks.filter(e=>e.taskState!=='cancelled'&&((e.plannedDate||(e.location==='daily'?e.date:null))===today||e.dueDate===today||(e.completedAt&&Core.getToday(new Date(e.completedAt))===today)));
   const completed=selected.filter(e=>e.taskState==='completed');
   const overdue=tasks.filter(e=>['open','doing'].includes(e.taskState)&&Core.isLate(e,now));
@@ -46,5 +64,5 @@ function summary(raw,now=new Date(),updatedAt=null){
   const simplify=e=>({id:e.id,taskId:e.taskId||null,text:e.text,priority:e.priority,symbol:e.type==='event'?'○':e.taskState==='completed'?'×':'•',state:e.eventState||e.taskState,plannedTime:e.plannedTime||null,overdue:e.type==='task'&&Core.isLate(e,now)});
   return {date:today,timeZone:'Asia/Shanghai',updatedAt,total:selected.length,completed:completed.length,overdue:overdue.length,pending:pending.slice(0,8).map(simplify),events:entries.filter(e=>e.type==='event'&&(e.plannedDate||e.date)===today&&e.eventState!=='cancelled').sort((a,b)=>(a.plannedTime||'99:99').localeCompare(b.plannedTime||'99:99')).slice(0,5).map(simplify)};
 }
-return {clone,keyOf,uid,groups,diff,replace,validateOperation,summary};
+return {clone,keyOf,uid,groups,visible,setTrashed,diff,replace,validateOperation,summary};
 });

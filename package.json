@@ -1,6 +1,6 @@
 {
   "name": "shiye-bullet-journal",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "private": true,
   "description": "拾页：支持离线、云同步与 Scriptable 的子弹笔记",
   "scripts": {

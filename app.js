@@ -53,7 +53,7 @@
   }
   function mirrorLegacy() {
     if(engine?.owner || persistFailed)return;
-    try { const raw=JSON.stringify(entries);localStorage.setItem(STORAGE_KEY,raw);storedSnapshot=raw; }
+    try { const raw=JSON.stringify(engine?.state.entries||entries);localStorage.setItem(STORAGE_KEY,raw);storedSnapshot=raw; }
     catch { /* IndexedDB remains authoritative after a successful transaction. */ }
   }
   async function commit(change) {
@@ -259,6 +259,7 @@
       action(entry.status==='cancelled'?'reopen':'cancel','–',entry.status==='cancelled'?'恢复记录':'划掉这条笔记');
     }
     action('history','◷','查看时间与操作历史');
+    action('trash','⌫','移到回收站','可以在账号与同步中恢复');
     openDialog('<div class="dialog-eyebrow">'+(entry.type==='event'?'AN EVENT, WITH A TIME AND A STORY':'FOLLOW THROUGH, ONE STEP AT A TIME')+'</div><h2 class="dialog-title">'+(entry.type==='event'?'这件事，接下来呢？':'这一条，怎么处理？')+'</h2><div class="dialog-entry">'+escape(entrySymbol(entry))+' '+escape(entry.text)+entryMeta(entry)+'</div><p id="dialog-error" class="dialog-error" hidden></p><div class="action-grid">'+operations.join('')+'</div>');
     $$('#dialog-content [data-operation]').forEach(button=>button.onclick=async()=>{
       const operation=button.dataset.operation;
@@ -267,11 +268,12 @@
       if(operation==='history'){showHistory(current);return;}
       if(operation==='current'){closeDialog();jumpTo(current);return;}
       const success=await commit(latest=>{
+        if(operation==='trash')return window.JournalSyncModel.setTrashed(latest,[{key:window.JournalSyncModel.keyOf(current),revision:current.revision}]);
         if(current.type==='task')return Core.changeTask(latest,current.id,operation);
         if(current.type==='event')return Core.changeEvent(latest,current.id,operation);
         return latest.map(item=>item.id===current.id?{...item,status:operation==='cancel'?'cancelled':'open',revision:item.revision+1,updatedAt:new Date().toISOString(),history:[...item.history,{kind:operation,at:new Date().toISOString()}]}:item);
       });
-      if(success){closeDialog();notify({start:'已开始，开始时间已记录。',complete:'已完成，完成时间已记录。',occur:'已标记发生，可以补充事件记录。',cancel:'已划掉，历史仍保留。',reopen:'已恢复，之前的操作时间仍在历史中。'}[operation]);}
+      if(success){closeDialog();notify({trash:'已移到回收站，可以恢复。',start:'已开始，开始时间已记录。',complete:'已完成，完成时间已记录。',occur:'已标记发生，可以补充事件记录。',cancel:'已划掉，历史仍保留。',reopen:'已恢复，之前的操作时间仍在历史中。'}[operation]);}
     });
   }
   function timingFields(entry,prefix) {
@@ -319,7 +321,7 @@
   }
   function showHistory(original) {
     const entry=Core.taskFor(entries,currentEntry(original.id) || original);
-    const labels={created:'创建记录',start:'开始任务',complete:'标记完成',reopen:'恢复待办 / 待发生',cancel:'划掉 / 取消',edited:'修改记录',rescheduled:'调整日期与时间',migrated:'迁移 / 安排到未来',occurred:'标记事件已发生'};
+    const labels={created:'创建记录',start:'开始任务',complete:'标记完成',reopen:'恢复待办 / 待发生',cancel:'划掉 / 取消',trashed:'移到回收站',restored:'从回收站恢复',edited:'修改记录',rescheduled:'调整日期与时间',migrated:'迁移 / 安排到未来',occurred:'标记事件已发生'};
     const history=entry.history.slice().reverse();
     const timing=entryMeta(entry);
     function historyDetail(item){
@@ -415,7 +417,7 @@
   if(!persistFailed){
     try{
       let deviceId;try{deviceId=localStorage.getItem('shiye.device-id')||uid();localStorage.setItem('shiye.device-id',deviceId);}catch{deviceId=uid();}
-      engine=new window.JournalSync.Engine({deviceId,onChange:fresh=>{entries=Core.normalize(fresh);render();mirrorLegacy();syncUI?.status();},onStatus:status=>syncUI?.status(status)});
+      engine=new window.JournalSync.Engine({deviceId,onChange:fresh=>{entries=window.JournalSyncModel.visible(fresh);render();mirrorLegacy();syncUI?.status();},onStatus:status=>syncUI?.status(status)});
       await engine.init(entries);
       syncUI=new window.JournalSyncUI(engine,window.JOURNAL_CONFIG||{mode:'local'},notify);syncUI.status();
       await syncUI.init().catch(error=>engine.problem(error));

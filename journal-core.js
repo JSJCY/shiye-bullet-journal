@@ -52,7 +52,8 @@
       validatePlacement(entry,now);
       entry.priority = Boolean(entry.priority); entry.inspiration = Boolean(entry.inspiration);
       const legacyEventTime=entry.type==='event' && !Object.hasOwn(entry,'plannedTime') ? /^(\d{1,2}):(\d{2})\s/.exec(entry.text) : null;
-      for (const key of ['createdAt','updatedAt','startedAt','completedAt','occurredAt','cancelledAt','plannedDate','plannedTime','dueDate','dueTime']) entry[key] = empty(entry[key]) ?? null;
+      for (const key of ['createdAt','updatedAt','startedAt','completedAt','occurredAt','cancelledAt','trashedAt','plannedDate','plannedTime','dueDate','dueTime']) entry[key] = empty(entry[key]) ?? null;
+      if(entry.trashedAt && (typeof entry.trashedAt!=='string'||!Number.isFinite(Date.parse(entry.trashedAt))))throw new Error('回收站时间无效，请先备份。');
       if (entry.plannedDate && !isValidDate(entry.plannedDate)) throw new Error('保存的计划日期无效，请先备份。');
       if (entry.dueDate && !isValidDate(entry.dueDate)) throw new Error('保存的截止日期无效，请先备份。');
       if ((entry.plannedTime && !isValidTime(entry.plannedTime)) || (entry.dueTime && !isValidTime(entry.dueTime))) throw new Error('保存的时间无效，请先备份。');
@@ -88,7 +89,7 @@
         if(!target)throw new Error('任务的去向无法读取，请先备份。');
         history.push({id:'legacy-move-'+entry.id,kind:'migrated',at:null,from:{...placement(entry),id:entry.id},to:{...placement(target),id:target.id}});
       }
-      const common={taskId:origin.taskId || origin.id,taskState,text:leaf.text,priority:leaf.priority,inspiration:leaf.inspiration,createdAt:origin.createdAt || leaf.createdAt || null,updatedAt:leaf.updatedAt,startedAt:leaf.startedAt,completedAt:leaf.completedAt,cancelledAt:leaf.cancelledAt,plannedDate:leaf.plannedDate,plannedTime:leaf.plannedTime,dueDate:leaf.dueDate,dueTime:leaf.dueTime,history,revision:Math.max(...group.map(entry=>entry.revision))};
+      const common={taskId:origin.taskId || origin.id,taskState,text:leaf.text,priority:leaf.priority,inspiration:leaf.inspiration,createdAt:origin.createdAt || leaf.createdAt || null,updatedAt:leaf.updatedAt,startedAt:leaf.startedAt,completedAt:leaf.completedAt,cancelledAt:leaf.cancelledAt,trashedAt:leaf.trashedAt,plannedDate:leaf.plannedDate,plannedTime:leaf.plannedTime,dueDate:leaf.dueDate,dueTime:leaf.dueTime,history,revision:Math.max(...group.map(entry=>entry.revision))};
       for(const entry of group)Object.assign(entry,clone(common));
       leaf.status=taskState;
     }
@@ -116,7 +117,7 @@
   }
   function activeTasks(entries) {
     const seen=new Set();
-    return entries.filter(entry=>{if(entry.type!=='task'||ARCHIVED.includes(entry.status)||seen.has(entry.taskId || entry.id))return false;seen.add(entry.taskId || entry.id);return true;});
+    return entries.filter(entry=>{if(entry.type!=='task'||entry.trashedAt||ARCHIVED.includes(entry.status)||seen.has(entry.taskId || entry.id))return false;seen.add(entry.taskId || entry.id);return true;});
   }
   function setGroup(entries, entry, patch, event, now) {
     const history=[...entry.history,{id:uid(),...event,at:stamp(now)}];

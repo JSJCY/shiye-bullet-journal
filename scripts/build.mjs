@@ -17,12 +17,12 @@ const config={mode:envId?'cloud':'local',auth:{emailEnabled:args.includes('--ema
 await fs.writeFile(path.join(web,'config.js'),'window.JOURNAL_CONFIG = Object.freeze('+JSON.stringify(config)+');\n');
 const hash=crypto.createHash('sha256');for(const file of [...publicFiles,'config.js'])hash.update(await fs.readFile(path.join(web,file)));
 const shellHash=hash.digest('hex').slice(0,12);
-let sw=await fs.readFile('service-worker.js','utf8');sw=sw.replace('shiye-shell-v0.3.0','shiye-shell-'+shellHash);
+let sw=await fs.readFile('service-worker.js','utf8');sw=sw.replace('shiye-shell-v0.3.1','shiye-shell-'+shellHash);
 await fs.writeFile(path.join(web,'service-worker.js'),sw);
 for(const name of ['journal','journal-widget']){
  const dir=path.join(functions,name);await fs.mkdir(dir,{recursive:true});
  await build({entryPoints:[name==='journal'?'backend/cloud-function.cjs':'backend/widget-http.cjs'],outfile:path.join(dir,'index.js'),bundle:true,platform:'node',format:'cjs',target:'node20',external:[],logLevel:'warning'});
- const packageJson={name:'shiye-'+name,version:'0.3.0',private:true,main:'index.js'};
+ const packageJson={name:'shiye-'+name,version:'0.3.1',private:true,main:'index.js'};
  if(name==='journal-widget'){
   await fs.writeFile(path.join(dir,'scf_bootstrap'),'#!/bin/bash\nexport PORT=9000\n/var/lang/node20/bin/node index.js\n',{mode:0o755});
  }

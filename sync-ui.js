@@ -23,13 +23,15 @@ class SyncUI{
  message(error){if(/Failed to fetch|NetworkError|timeout/i.test(error.message||''))error={message:'暂时无法连接，请联网后重试；笔记仍保存在此设备。'};const box=this.dialog.querySelector('[data-sync-error]');if(box){box.hidden=false;box.textContent=error.message||String(error);}}
  async open(){if(!this.provider){try{await this.init();}catch(e){this.notify(e.message);return;}}await this.render();if(!this.dialog.open)this.dialog.showModal();}
  async render(){
+  this.dialog.setAttribute('aria-label','同步与小组件');
   const local=this.provider.mode==='local',signed=!!this.engine.owner&&!this.loginRequested,s=this.engine.status();
   this.dialog.innerHTML='<form method="dialog" class="sync-close"><button class="icon-button" aria-label="关闭同步面板">×</button></form><div class="dialog-eyebrow">YOUR JOURNAL, EVERYWHERE</div><h2 class="dialog-title">同步与小组件</h2><p class="sync-intro">'+(local?'当前是本机同步测试。跨设备使用需要部署到 CloudBase。':'同一账号登录电脑与 iPhone，笔记、符号与时间一起同步。')+'</p><div class="sync-state" data-sync-status></div><p class="dialog-error" data-sync-error hidden></p>'+(signed?this.signedMarkup():this.loginMarkup(local));
   this.status(s);
   if(signed)this.bindSigned();else{this.bindLogin(local);if(this.loginRequested){const b=document.createElement('button');b.type='button';b.className='text-button';b.textContent='返回当前账号';b.onclick=()=>{this.loginRequested=false;void this.render();};this.dialog.append(b);}}
  }
- loginMarkup(local){const emailEnabled=local||this.config.auth?.emailEnabled!==false;return '<form id="sync-login"><label class="dialog-field" for="sync-identifier">'+(local?'测试账号（英文、数字或邮箱）':emailEnabled?'用户名 / 邮箱':'用户名')+'</label><input id="sync-identifier" class="dialog-input" autocomplete="username" required><label class="dialog-field" for="sync-password">密码</label><input id="sync-password" class="dialog-input" type="password" autocomplete="current-password" minlength="8"><div class="sync-login-actions"><button class="primary-button" type="submit">登录</button>'+(emailEnabled?'<button class="secondary-button" type="button" data-signup>注册'+(local?'测试账号':'邮箱账号')+'</button>':'')+(!local&&emailEnabled?'<button class="secondary-button" type="button" data-otp>邮箱验证码</button><button class="text-button" type="button" data-reset>忘记密码</button>':'')+'</div></form><form id="sync-verify" hidden><label class="dialog-field" for="sync-code">邮箱验证码</label><input id="sync-code" class="dialog-input" autocomplete="one-time-code" inputmode="numeric"><div id="sync-reset-password" hidden><label class="dialog-field" for="sync-new-password">新密码（至少 8 位）</label><input id="sync-new-password" class="dialog-input" type="password" minlength="8" autocomplete="new-password"></div><button class="primary-button" type="submit">验证并继续</button></form><p class="dialog-tip">登录后会打开该账号的笔记。本设备原有笔记仍保留，可由你选择合并。</p>';}
+ loginMarkup(local){const emailEnabled=local||this.config.auth?.emailEnabled!==false;return '<form id="sync-login"><label class="dialog-field" for="sync-identifier">'+(local?'测试账号（英文、数字或邮箱）':emailEnabled?'用户名 / 邮箱':'用户名')+'</label><input id="sync-identifier" class="dialog-input" autocomplete="username" required><label class="dialog-field" for="sync-password">密码</label><input id="sync-password" class="dialog-input" type="password" autocomplete="current-password" minlength="8"><div class="sync-login-actions"><button class="primary-button" type="submit">登录</button>'+(emailEnabled?'<button class="secondary-button" type="button" data-signup>注册'+(local?'测试账号':'邮箱账号')+'</button>':'')+(!local&&emailEnabled?'<button class="secondary-button" type="button" data-otp>邮箱验证码</button><button class="text-button" type="button" data-reset>忘记密码</button>':'')+'</div></form><form id="sync-verify" hidden><label class="dialog-field" for="sync-code">邮箱验证码</label><input id="sync-code" class="dialog-input" autocomplete="one-time-code" inputmode="numeric"><div id="sync-reset-password" hidden><label class="dialog-field" for="sync-new-password">新密码（至少 8 位）</label><input id="sync-new-password" class="dialog-input" type="password" minlength="8" autocomplete="new-password"></div><button class="primary-button" type="submit">验证并继续</button></form><p class="dialog-tip">登录后会打开该账号的笔记。本设备原有笔记仍保留，可由你选择合并。</p><div class="sync-actions"><button type="button" class="secondary-button" id="sync-trash">回收站</button></div>';}
  bindLogin(local){
+  $('#sync-trash').onclick=()=>void this.manageRecords('trash').catch(e=>this.message(e));
   const emailEnabled=local||this.config.auth?.emailEnabled!==false;
   const login=this.dialog.querySelector('#sync-login'),identifier=()=>$('#sync-identifier').value.trim(),password=()=>$('#sync-password').value;
   const attempt=async work=>{login.querySelectorAll('button').forEach(b=>b.disabled=true);try{const identity=await work();if(identity.verification){$('#sync-verify').hidden=false;this.notify('请查看邮箱中的验证码。');}else{await this.attach(identity);await this.render();this.notify('账号已连接，原有笔记仍保留。');}}catch(e){this.message(e);}finally{if(login.isConnected)login.querySelectorAll('button').forEach(b=>b.disabled=false);}};
@@ -43,13 +45,15 @@ class SyncUI{
  }
  signedMarkup(){
   const conflicts=this.engine.state.conflicts;
-  return '<div class="sync-account"><strong>'+escape(this.account?.username||'我的账号')+'</strong><span><button class="text-button" id="sync-reauth">重新登录</button><button class="text-button" id="sync-logout">退出账号</button></span></div><div class="sync-actions"><button class="primary-button" id="sync-now">立即同步</button><button class="secondary-button" id="sync-import-guest">合并此设备旧笔记</button><button class="secondary-button" id="sync-drafts">下载冲突草稿</button></div>'+(this.engine.state.outbox.length?'<p class="dialog-tip">未上传内容留在此设备和当前账号中，退出账号后不会删除。</p>':'')+(conflicts.length?'<section class="sync-section"><h3>需要处理的冲突</h3>'+conflicts.map(c=>'<article class="conflict-card"><strong>'+escape(c.local.find(e=>!['migrated','scheduled'].includes(e.status))?.text||c.local[0]?.text)+'</strong><p>'+escape(c.message)+'</p><div><button class="secondary-button" data-resolve="cloud" data-key="'+escape(c.key)+'">采用云端版本</button><button class="secondary-button" data-resolve="note" data-key="'+escape(c.key)+'">将草稿另存为笔记</button></div></article>').join('')+'<p class="dialog-tip">处理前后的完整草稿都保存在本地，可随时下载。</p></section>':'')+'<section class="sync-section"><h3>iPhone 小组件</h3><p class="dialog-tip">显示今日完成数、待办、事件与逾期情况。刷新由 iOS 调度；点击进入网页。</p><div class="sync-actions"><button class="secondary-button" id="widget-create-token">生成只读凭据</button><button class="secondary-button" id="widget-download">下载 Scriptable 脚本</button></div><div id="widget-issued"></div><div id="widget-token-list"></div></section>';
+  return '<div class="sync-account"><strong>'+escape(this.account?.username||'我的账号')+'</strong><span><button class="text-button" id="sync-reauth">重新登录</button><button class="text-button" id="sync-logout">退出账号</button></span></div><div class="sync-actions"><button class="primary-button" id="sync-now">立即同步</button><button class="secondary-button" id="sync-import-guest">合并此设备旧笔记</button><button class="secondary-button" id="sync-cleanup">清理误合并的旧笔记</button><button class="secondary-button" id="sync-trash">回收站</button><button class="secondary-button" id="sync-drafts">下载冲突草稿</button></div>'+(this.engine.state.outbox.length?'<p class="dialog-tip">未上传内容留在此设备和当前账号中，退出账号后不会删除。</p>':'')+(conflicts.length?'<section class="sync-section"><h3>需要处理的冲突</h3>'+conflicts.map(c=>'<article class="conflict-card"><strong>'+escape(c.local.find(e=>!['migrated','scheduled'].includes(e.status))?.text||c.local[0]?.text)+'</strong><p>'+escape(c.message)+'</p><div><button class="secondary-button" data-resolve="cloud" data-key="'+escape(c.key)+'">采用云端版本</button><button class="secondary-button" data-resolve="note" data-key="'+escape(c.key)+'">将草稿另存为笔记</button></div></article>').join('')+'<p class="dialog-tip">处理前后的完整草稿都保存在本地，可随时下载。</p></section>':'')+'<section class="sync-section"><h3>iPhone 小组件</h3><p class="dialog-tip">显示今日完成数、待办、事件与逾期情况。刷新由 iOS 调度；点击进入网页。</p><div class="sync-actions"><button class="secondary-button" id="widget-create-token">生成只读凭据</button><button class="secondary-button" id="widget-download">下载 Scriptable 脚本</button></div><div id="widget-issued"></div><div id="widget-token-list"></div></section>';
  }
  bindSigned(){
   const action=async work=>{try{await work();}catch(e){this.message(e);}};
   $('#sync-reauth').onclick=()=>{this.loginRequested=true;void this.render();};
   $('#sync-now').onclick=()=>void action(async()=>{await this.engine.flush();await this.render();});
-  $('#sync-import-guest').onclick=()=>void action(async()=>{const r=await this.engine.importGuest();this.notify('已合并 '+r.added+' 项，跳过 '+r.skipped+' 项已有记录。');await this.render();});
+  $('#sync-import-guest').onclick=()=>void action(()=>this.manageRecords('import'));
+  $('#sync-cleanup').onclick=()=>void action(()=>this.manageRecords('cleanup'));
+  $('#sync-trash').onclick=()=>void action(()=>this.manageRecords('trash'));
   $('#sync-logout').onclick=()=>void action(async()=>{await this.provider.logout();this.subscription?.close?.();this.account=null;await this.engine.disconnect();await this.render();});
   $('#sync-drafts').onclick=()=>void this.engine.backup().then(data=>this.download(JSON.stringify({conflicts:data.conflicts,drafts:data.drafts},null,2),'拾页-冲突草稿.json','application/json'));
   this.dialog.querySelectorAll('[data-resolve]').forEach(b=>b.onclick=()=>void action(async()=>{await this.engine.resolve(b.dataset.key,b.dataset.resolve);await this.render();}));
@@ -66,6 +70,40 @@ class SyncUI{
    this.download(script,'拾页.js','text/javascript;charset=utf-8');this.notify('已下载；在 Scriptable 中导入并运行一次配置。');
   });
   void this.renderTokens();
+ }
+ async manageRecords(mode){
+  const originalScope=this.engine.scope;
+  await this.engine.reload();
+  if(originalScope!==this.engine.scope)throw new Error('账号已切换，请重新打开列表。');
+  let preview={scope:this.engine.scope,candidates:[]};
+  if(mode==='trash'){
+   preview.candidates=[...root.JournalSyncModel.groups(this.engine.state.entries||[]).values()].map(g=>({...g,entry:root.JournalCore.taskFor(g.entries,g.entries[0])})).filter(g=>g.entry.trashedAt);
+  }else preview=await this.engine.legacyPreview(mode);
+  const titles={cleanup:'清理误合并的旧笔记',import:'预览本机旧笔记',trash:'回收站'};
+  const descriptions={cleanup:'按本机旧笔记的标识匹配。旧版没有导入批次，列表可能包含之前已有的记录；请只勾选这次误合并的条目。',import:'先核对并勾选需要合并的笔记。已有记录和回收站记录会跳过，单击入口不会立即导入。',trash:'选中后可恢复原来的内容、状态和时间。同一任务的迁移历史会一起恢复。'};
+  this.dialog.setAttribute('aria-label',titles[mode]);
+  const empty=mode==='cleanup'?'没有找到匹配记录。请在误点合并的同一设备和浏览器打开；也可从单条笔记的操作菜单移到回收站。':mode==='trash'?'回收站是空的。':'没有需要合并的新记录。';
+  this.dialog.innerHTML='<form method="dialog" class="sync-close"><button class="icon-button" aria-label="关闭同步面板">×</button></form><h2 class="dialog-title">'+titles[mode]+'</h2><p class="sync-intro">'+descriptions[mode]+'</p><p class="dialog-error" data-sync-error hidden></p><form id="sync-record-form"><div class="record-select-list">'+(preview.candidates.length?preview.candidates.map(g=>{
+   const e=g.entry,symbol=e.type==='event'?'○':e.type==='note'?'–':e.taskState==='completed'?'×':'•';
+   const where=e.collection||e.plannedDate||e.date||'';
+   return '<label class="record-option"><input type="checkbox" data-record-key="'+escape(g.key)+'"><span><strong>'+escape(symbol)+' '+escape(e.text)+'</strong><small>'+escape(where)+(g.entries.length>1?' · 含 '+g.entries.length+' 条迁移记录':'')+(g.changed?' · 与本机旧记录不同，请核对':'')+'</small></span></label>';
+  }).join(''):'<p class="dialog-tip">'+empty+'</p>')+'</div><div class="sync-actions"><button type="button" class="text-button" id="sync-select-all">全选 / 取消全选</button><button type="button" class="text-button" id="sync-record-backup">下载完整备份</button></div><div class="sync-actions"><button type="submit" class="primary-button" id="sync-record-submit" disabled></button><button type="button" class="secondary-button" id="sync-record-back">返回</button></div></form><p class="dialog-tip">'+(mode==='cleanup'?'只有选中的条目移入回收站，其他记录保持原样。清理后可在“回收站”恢复。':'')+'</p>';
+  const form=this.dialog.querySelector('#sync-record-form'),inputs=[...form.querySelectorAll('[data-record-key]')],submit=form.querySelector('#sync-record-submit');
+  const selected=()=>inputs.filter(input=>input.checked).map(input=>input.dataset.recordKey);
+  const update=()=>{const count=selected().length;submit.disabled=count===0;submit.textContent=(mode==='trash'?'恢复所选':mode==='import'?'确认合并':'移到回收站')+'（'+count+'）';};
+  inputs.forEach(input=>input.onchange=update);update();
+  form.querySelector('#sync-select-all').onclick=()=>{const checked=inputs.some(input=>!input.checked);inputs.forEach(input=>input.checked=checked);update();};
+  form.querySelector('#sync-record-back').onclick=()=>void this.render();
+  form.querySelector('#sync-record-backup').onclick=async()=>{try{this.download(JSON.stringify(await this.engine.backup(),null,2),'拾页-清理前完整备份.json','application/json');}catch(e){this.message(e);}};
+  form.onsubmit=async event=>{
+   event.preventDefault();const keys=selected();if(!keys.length)return;
+   form.querySelectorAll('button,input').forEach(node=>node.disabled=true);
+   try{
+    if(mode==='import'){const r=await this.engine.importSelection(preview,keys);this.notify('已合并 '+r.added+' 项，跳过 '+r.skipped+' 项已有记录。');}
+    else{const selections=preview.candidates.filter(g=>keys.includes(g.key)).map(g=>({key:g.key,revision:g.revision}));await this.engine.trashSelections(selections,{scope:preview.scope,restore:mode==='trash'});this.notify(mode==='trash'?'已恢复所选记录。':'已将所选记录移到回收站，可以恢复。');}
+    await this.engine.flush();await this.render();
+   }catch(e){this.message(e);form.querySelectorAll('button,input').forEach(node=>node.disabled=false);update();}
+  };
  }
  async renderTokens(){
   if(!this.engine.online()){const node=$('#widget-token-list');if(node)node.innerHTML='<p class="dialog-tip">联网后可管理小组件凭据。</p>';return;}

@@ -49,7 +49,7 @@ node --env-file=.env scripts/build.mjs --email-login
 - 独立且可撤销的只读小组件凭据；服务端仅保存凭据哈希。
 - JSON / Markdown 导出，以及将 JSON 中的笔记合并导入。
 
-当前仅支持划掉或取消，没有删除和回收站。云同步使用前台每 30 秒轮询及联网/焦点触发，尚未接入 PostgreSQL Realtime。事件没有系统推送提醒，Scriptable 刷新由 iOS 调度。
+支持将所选记录移到可恢复的回收站，并预览清理误合并的旧笔记；没有永久删除。操作方法见 [旧笔记清理说明](docs/cleanup-old-notes.md)。云同步使用前台每 30 秒轮询及联网/焦点触发，尚未接入 PostgreSQL Realtime。事件没有系统推送提醒，Scriptable 刷新由 iOS 调度。
 
 旧版浏览器笔记会迁入 IndexedDB，并保留原始备份。退出账号不会删除该账号的本地队列。JSON 备份包含记录、队列、冲突和草稿；导入只合并笔记，不恢复旧队列或冲突。
 

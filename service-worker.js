@@ -1,5 +1,5 @@
 'use strict';
-const CACHE_NAME='shiye-shell-v0.3.0';
+const CACHE_NAME='shiye-shell-v0.3.1';
 const ASSETS=['./','./index.html','./styles.css','./app.js','./journal-core.js','./sync-model.js','./config.js','./provider.js','./sync-engine.js','./sync-ui.js','./cloudbase-adapter.js','./manifest.webmanifest','./icons/icon-192.png','./icons/icon-512.png','./icons/apple-touch-icon.png'];
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE_NAME).then(cache=>cache.addAll(ASSETS)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k.startsWith('shiye-shell-')&&k!==CACHE_NAME).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));

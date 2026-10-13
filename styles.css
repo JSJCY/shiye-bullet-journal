@@ -161,3 +161,10 @@ dialog{padding:0;color:var(--ink)}.action-dialog{border:1px solid #e3e7ec;backgr
 @media(max-width:700px){.topbar{align-items:flex-start;flex-direction:column;padding-top:18px;padding-bottom:16px;gap:12px}.top-actions{justify-content:flex-start;gap:8px;max-width:100%}.top-actions .export-button{font-size:11px;padding:7px 9px}.sync-dialog{padding:28px 20px}.sync-dialog .dialog-title{font-size:27px}.sync-dialog .sync-login-actions>*{flex-grow:1}.sync-dialog .sync-intro{margin-top:8px}}
 
 @media(max-width:680px){.entry-text{font-size:14px;line-height:1.7}.entry-timing{font-size:10px}.status-label{font-size:9px}.composer input,.composer-timing input,.dialog-input,.dialog-select,.dialog-textarea,.sync-dialog .dialog-input{font-size:16px}.composer-symbol,.add-button,.entry-more,.entry-symbol{min-width:40px;min-height:44px}.type-selector button,.filters button{min-height:36px;font-size:11px}.nav-item{min-height:44px;font-size:12px}.date-block h2{font-size:13px}.sync-dialog .dialog-field{font-size:13px}.topbar .export-button{min-height:36px}.action-grid button{min-height:48px}.input-hint{display:none}}
+
+/* Selective legacy cleanup and reversible trash. */
+.record-select-list{max-height:42svh;overflow-y:auto;border:1px solid #e3e7ec;border-radius:10px;margin-top:12px}
+.record-option{display:flex;align-items:flex-start;gap:12px;padding:14px;border-bottom:1px solid #e3e7ec;cursor:pointer;overflow-wrap:anywhere}
+.record-option:last-child{border-bottom:0}.record-option input{flex:none;width:20px;height:20px;margin:2px 0;accent-color:#17665c}
+.record-option span{min-width:0}.record-option strong{display:block;font-size:14px;font-weight:500;line-height:1.6}.record-option small{display:block;margin-top:4px;color:#626e7b;font-size:12px;line-height:1.5}
+.sync-dialog button:disabled{opacity:.45;cursor:default}.record-select-list>.dialog-tip{padding:14px}

@@ -43,9 +43,11 @@ class Engine{
     if(deferSync)void this.flush().catch(e=>this.problem(e));else await this.flush();return this.status();
   }
   async disconnect(){this.epoch++;this.owner=null;this.provider=null;this.scope='guest';this.error=null;const s=await this.cache.read('guest');this.publish(s||blank());this.signal();}
-  async mutate(change){
+  async mutate(change,{expectedScope=this.scope}={}){
     const scope=this.scope,connected=!!this.owner;
+    if(scope!==expectedScope)throw new Error('账号已切换，请重新打开列表。');
     const s=await this.cache.update(scope,x=>{
+      if(this.scope!==scope)throw new Error('账号已切换，操作未执行。');
       const before=Core.normalize(x.entries||[]),after=Core.normalize(change(Model.clone(before)));
       const ops=Model.diff(before,after,this.deviceId);
       x.entries=after;
@@ -55,12 +57,40 @@ class Engine{
     this.error=null;this.publish(s,scope);this.signal(scope);if(connected)void this.flush().catch(e=>this.problem(e));return s.entries;
   }
   async importEntries(raw){
-    const imported=Core.normalize(raw),existing=Model.groups(this.state.entries||[]);let added=0,skipped=0;
-    const fresh=[];
-    for(const [key,g]of Model.groups(imported)){if(existing.has(key)){skipped++;continue;}fresh.push(...g.entries);added++;}
-    if(fresh.length)await this.mutate(current=>[...current,...fresh]);return {added,skipped};
+    const imported=Core.normalize(raw);let added=0,skipped=0;
+    if(imported.length)await this.mutate(current=>{
+      const existing=Model.groups(current),fresh=[];
+      for(const [key,g]of Model.groups(imported)){if(existing.has(key)){skipped++;continue;}fresh.push(...g.entries);added++;}
+      return [...current,...fresh];
+    });
+    return {added,skipped};
   }
   async importGuest(){const guest=await this.cache.read('guest');return this.importEntries(guest?.entries||[]);}
+  async legacyPreview(mode='cleanup'){
+    if(!this.owner)throw new Error('请先登录需要清理的账号。');
+    const scope=this.scope,guest=await this.cache.read('guest');
+    if(scope!==this.scope)throw new Error('账号已切换，请重新打开列表。');
+    const old=Model.groups(guest?.entries||[]),current=Model.groups(this.state.entries||[]),candidates=[];
+    for(const [key,g]of old){
+      const present=current.get(key),source=Core.taskFor(g.entries,g.entries[0]);
+      if(mode==='import'){
+        if(!present&&!source.trashedAt)candidates.push({...g,entry:source});
+      }else if(present){
+        const entry=Core.taskFor(present.entries,present.entries[0]);
+        if(!entry.trashedAt)candidates.push({...present,entry,changed:entry.text!==source.text||entry.revision!==source.revision});
+      }
+    }
+    return {scope,candidates};
+  }
+  async trashSelections(selections,{scope=this.scope,restore=false}={}){
+    await this.mutate(raw=>Model.setTrashed(raw,selections,!restore),{expectedScope:scope});
+    return selections.length;
+  }
+  async importSelection(preview,keys){
+    if(preview.scope!==this.scope)throw new Error('账号已切换，请重新打开列表。');
+    const selected=new Set(keys),raw=preview.candidates.filter(g=>selected.has(g.key)).flatMap(g=>g.entries);
+    return this.importEntries(raw);
+  }
   async flush(){
     if(!this.owner||!this.provider||!this.online()){this.onStatus(this.status());return;}
     if(this.running){await this.running;if(this.owner&&this.online())return this.flush();return;}
