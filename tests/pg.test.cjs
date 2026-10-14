@@ -14,16 +14,16 @@ async function fixture(){
  const store=new PgStore({envId:'test',apiKey:'fixture-only',fetchImpl});return {db,store,service:createService(store)};
 }
 test('PostgreSQL RPC commits migrations atomically and rejects stale concurrent edits',async()=>{
- const {db,service}=await fixture();
+ const {db,service}=await fixture(),now=new Date("2026-10-13T02:00:00Z");
  try{
-  const e=Core.makeEntry({type:'task',text:'PC + iPhone',date:'2026-10-13',location:'daily'});
+  const e=Core.makeEntry({type:'task',text:'PC + iPhone',date:'2026-10-13',location:'daily'},now);
   const operation=Model.diff([], [e], 'PC')[0];
   const first=await service.rpc('owner-A','apply',{operation});
   assert.deepEqual(await service.rpc('owner-A','apply',{operation}),first);
-  const migrated=Core.migrate([e],e.id,{location:'future',date:'2026-10-14'});
+  const migrated=Core.migrate([e],e.id,{location:'future',date:'2026-10-14'},now);
   await service.rpc('owner-A','apply',{operation:Model.diff([e],migrated,'PC')[0]});
   const leaf=Core.activeTasks(migrated)[0];
-  const edits=['PC','iPhone'].map(text=>Model.diff(migrated,Core.updateEntry(migrated,leaf.id,{text},new Date(),leaf.revision),'device')[0]);
+  const edits=['PC','iPhone'].map(text=>Model.diff(migrated,Core.updateEntry(migrated,leaf.id,{text},now,leaf.revision),'device')[0]);
   const results=await Promise.allSettled(edits.map(operation=>service.rpc('owner-A','apply',{operation})));
   assert.equal(results.filter(x=>x.status==='fulfilled').length,1);
   assert.equal(results.find(x=>x.status==='rejected').reason.code,'CONFLICT');
