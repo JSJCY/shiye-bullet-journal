@@ -8,6 +8,31 @@
 
 在线体验使用项目维护者的 CloudBase 环境，笔记按账号隔离。腾讯云默认测试域名会显示访问提示；正式使用应配置自定义域名。下载源码后默认运行本地模式，不会连接维护者的云端。
 
+## 界面预览
+
+### 网页端
+
+本地运行的每日记录页面，使用项目内置示例数据，展示记录列表、日期导航、待跟进事项和今日安排。
+
+![网页端每日记录：桌面三栏布局](docs/screenshots/desktop-daily.jpg)
+
+### iPhone 实机
+
+以下为 iPhone 上的实际运行截图，展示页面导航、待办与已完成记录，以及新增记录入口。
+
+<table>
+  <tr>
+    <td width="50%" align="center"><strong>导航与每日记录</strong></td>
+    <td width="50%" align="center"><strong>任务状态与记录输入</strong></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/screenshots/iphone-navigation.jpg" alt="iPhone 实机：顶部导航、日期选择与每日记录" width="360"></td>
+    <td align="center"><img src="docs/screenshots/iphone-daily.jpg" alt="iPhone 实机：待办、已完成记录与新增记录入口" width="360"></td>
+  </tr>
+</table>
+
+截图用于展示界面；完整的同步、离线恢复和小组件验收范围见 [验收记录](docs/verification.md)。
+
 ## 本地运行
 
 需要 Node.js 20.19 或更高版本。
